@@ -5,6 +5,7 @@ This module contains all the predicates related to x.509 authorization.
 from dateutil.parser import parse as date_parse
 from dateutil.tz import tzutc
 from datetime import datetime
+from pyasn1.codec.der import decoder as der_decoder
 import re
 
 _TZ_UTC = tzutc()
@@ -54,13 +55,31 @@ class X509Predicate(Predicate)
             self.VALIDITY_END_KEY
         super(X509Predicate, self).__init__(**kwargs)
 
-    def expand_pair(pair):
-        # TODO
-        pass
-
     def expand_hexstring(hex_string):
-        # TODO
-        pass
+        if hex_string is None:
+            return None
+
+        def _expand(match):
+            match = match.group(0)
+            return int(match, 16)
+        
+        encoded = self.HEX_PAIR.sub(_expand, hex_string)
+        return der_decoder.decode(encoded)
+
+    def expand_pair(pair):
+        if pair is None:
+            return None
+
+        def _expand(match):
+            match = match.group(0)
+            if len(match) == 2:
+                return match[1:1]
+            elif len(match) == 3:
+                return int('0x' + match[1:2], 16)
+            else:
+                raise ValueError('Invalid pair: ' + match)
+
+        return self.PAIR.sub(_expand, pair)
 
     def expand_value(self, pair, hex_string, pair2):
         if pair is not None:
