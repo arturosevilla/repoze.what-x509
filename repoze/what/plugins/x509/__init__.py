@@ -220,7 +220,7 @@ class X509DNPredicate(X509Predicate):
            parsed_dn['OU'] != self.organization_unit:
             self.unmet()
 
-class is_issuer(X509Predicate):
+class is_issuer(X509DNPredicate):
 
     ISSUER_KEY_DN = 'SSL_CLIENT_I_DN'
 
@@ -239,7 +239,7 @@ class is_issuer(X509Predicate):
 
 
 
-class is_user(X509Predicate):
+class is_user(X509DNPredicate):
 
     USER_KEY_DN = 'SSL_CLIENT_S_DN'
 
