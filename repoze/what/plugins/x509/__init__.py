@@ -6,6 +6,8 @@ from dateutil.parser import parse as date_parse
 from dateutil.tz import tzutc
 from datetime import datetime
 from pyasn1.codec.der import decoder as der_decoder
+from pyasn1.error import SubstrateUnderrunError
+from repoze.what.predicates import Predicate
 import re
 
 _TZ_UTC = tzutc()
@@ -22,7 +24,7 @@ class X509Predicate(Predicate)
     SPECIAL = re.compile(',=+<>#;')
     HEX_CHAR = re.compile('[0-9a-fA-f]')
     HEX_PAIR = re.compile('%(hex_char)s%(hex_char)s' % {'hex_char': HEX_CHAR})
-    HEX_STRING = re.compile('%(hex_pairs)s+' % {'hex_pair' : HEX_PAIR})
+    HEX_STRING = re.compile('%(hex_pair)s+' % {'hex_pair' : HEX_PAIR})
     PAIR = re.compile(r'\\(?:[%(special)s]|\\|"|%(hex_pair)s)' % {
         'special': SPECIAL,
         'hex_pair': HEX_PAIR
@@ -61,10 +63,15 @@ class X509Predicate(Predicate)
 
         def _expand(match):
             match = match.group(0)
-            return int(match, 16)
+            return chr(int(match, 16))
         
         encoded = self.HEX_PAIR.sub(_expand, hex_string)
-        return der_decoder.decode(encoded)
+        try:
+            processed, unprocessed = der_decoder.decode(encoded)
+            assert len(unprocessed) == 0
+            return processed
+        except (SubstrateUnderrunError, AssertionError):
+            return None
 
     def expand_pair(pair):
         if pair is None:

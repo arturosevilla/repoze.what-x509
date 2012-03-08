@@ -32,14 +32,16 @@ setup(name='repoze.what.plugins.x509',
       include_package_data=True,
       zip_safe=True,
       tests_require=[
-          'repoze.who >= 1.0.14',
+          'repoze.who >= 1.0.14,<2.0',
+          'repoze.what >= 1.0.9,<2.0',
           'python-dateutil < 2.0',
           'coverage',
           'pyasn1 >= 0.1.2',
           'nose'
       ],
       install_requires=[
-          'repoze.who >= 1.0.14',
+          'repoze.who >= 1.0.14,<2.0',
+          'repoze.what >= 1.0.9,<2.0',
           'python-dateutil < 2.0',
           'pyasn1 >= 0.1.2'
       ],
