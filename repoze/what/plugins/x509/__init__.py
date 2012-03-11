@@ -16,217 +16,93 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+
 """
-This module contains all the predicates related to x.509 authorization.
+Repoze what x509 plugin. It contains support for an identifier implementation
+and predicates.
 """
 
-from dateutil.parser import parse as date_parse
-from dateutil.tz import tzutc
-from datetime import datetime
-from repoze.what.predicates import Predicate
-import re
+from zope.interface import implements as zope_implements
+from repoze.who.interfaces import IIdentifier
 
-_TZ_UTC = tzutc()
-
-__all__ = ['is_user', 'is_issuer', 'X509Predicate', 'X509DNPredicate']
+from .predicates import *
+from .utils import *
 
 
-class X509Predicate(Predicate)
+__all__ = ['is_issuer', 'is_subject', 'X509Identifier']
 
-    VERIFY_KEY = 'SSL_CLIENT_VERIFY'
-    VALIDITY_START_KEY = 'SSL_CLIENT_V_START'
-    VALIDITY_END_KEY = 'SSL_CLIENT_V_END'
 
-    # Adapted the scan mechanism from Ruby's OpenSSL module
-    DN_SSL_REGEX = re.compile('\\s*([^\\/,]+)\\s*')
+class X509Identifier(object):
+    """
+    IIdentifier for HTTP requests with client certificates.
+    """
+    zope_implements(IIdentifier)
 
-    def __init__(self, **kwargs):
-        self.verify_key = kwargs.pop('verify_key', None) or self.VERIFY_KEY
-        self.validity_start_key = kwargs.pop('validity_start_key', None) or \
-            self.VALIDITY_START_KEY
-        self.validity_end_key = kwargs.pop('validity_end_key', None) or \
-            self.VALIDITY_END_KEY
-        super(X509Predicate, self).__init__(**kwargs)
+    classifications = { IIdentifier: ['browser'] }
 
-    def parse_dn(self, dn):
+    def __init__(self, subject_dn_key, login_field='Email',
+                 multiple_values=False, verify_key=VERIFY_KEY,
+                 start_key=VALIDITY_START_KEY, end_key=VALIDITY_END_KEY,
+                 classifications=None):
         """
-        Scan the distinguished name that returns OpenSSL based modules.
         """
-        parsed = {}
-        for match in self.DN_SSL_REGEX.finditer(dn):
-            type_, value = match.group(0).split('=', 2)
-            if type_ not in parsed:
-                parsed[type_] = []
-            parsed[type_].append(value)
+        self.subject_dn_key = subject_dn_key
+        self.login_field = login_field
+        self.verify_key = verify_key
+        self.start_key = start_key
+        self.end_key = end_key
+        self.multiple_values = multiple_values
+        if classifications is not None:
+            self.classifications = classifications
 
-        return parsed
+    # IIdentifier
+    def identify(self, environ):
+        """
+        Gets the credentials for this request.
+        """
+        subject_dn = environ.get(self.subject_dn_key)
+        if subject_dn is None or not verify_certificate(
+            environ,
+            self.verify_key,
+            self.start_key,
+            self.end_key
+        ):
+            return None
 
-    def evaluate(self, environ, credentials):
-        # Cannot assume every environment will have all mod_ssl CGI vars.
-        verified = environ.get(self.verify_key)
-        validity_start = environ.get(self.validity_start_key)
-        validity_end = environ.get(self.validity_end_key)
-        if verified != 'SUCCESS':
-            self.unmet()
+        creds = {'subject': subject_dn }
+        # First let's try with Apache-like var name, if None then parse the DN
+        key = self.subject_dn_key + '_' + self.login_field
+        login = environ.get(key)
+        if login is None:
+            try:
+                login = parse_dn(subject_dn)[self.login_field]
+            except:
+                login = None
+        else:
+            logins = []
+            try:
+                n = 0
+                while True:
+                    logins.append(environ[key + '_' + n])
+                    n += 1
+            except KeyError:
+                pass
+            
+            if n == 0:
+                login = [login]
+            else:
+                login = logins
+                
 
-        if validity_start is None or validity_end is None:
-            return
+        if login is None:
+            return None
 
-        validity_start = date_parse(validity_start)
-        validity_end = date_parse(validity_end)
+        if not self.multiple_values and len(login) > 1:
+            return None
+        elif not self.multiple_values:
+            creds['login'] = login[0]
+        else:
+            creds['login'] = login
 
-        if validity_start.tzinfo != _TZ_UTC or validity_end.tzinfo != _TZ_UTC:
-            # Can't consider other timezones
-            self.unmet()
-
-        now = datetime.utcnow().replace(tzinfo=_TZ_UTC)
-        if validity_start >= now <= validity_end:
-            return
-        
-        self.unmet()
-
-
-class X509DNPredicate(X509Predicate):
-
-    def __init__(self, common_name=None, organization=None,
-                 organization_unit=None, country=None,
-                 state=None, locality=None, environ_key=None, **kwargs):
-        if common_name is None and organization_unit is None and \
-           organization is None and country is None and state is None and \
-           locality is None:
-            raise ValueError(('At least one of common_name, organization_unit,'
-                              ' organization, country, state, or locality '
-                              'parameters must have a value'))
-
-        field_and_values = (
-            ('O', organization, 'organization'),
-            ('CN', common_name, 'common_name'),
-            ('OU', organization_unit, 'organization_unit'),
-            ('C', country, 'country'),
-            ('ST', state, 'state'),
-            ('L', locality, 'locality')
-        )
-
-        self._prepare_dn_params_with_consistency(
-            field_and_values,
-            kwargs
-        )
-
-        super(X509DNPredicate, self).__init__(**kwargs)
-
-        if self.environ_key is None or len(self.environ_key) == 0:
-            raise ValueError('This predicate requires an WSGI environ key')
-
-    def _prepare_dn_params_with_consistency(self, check_params, kwargs):
-        # We prefer common_name over CN, for example
-        # It receives a 3-tuple: 
-        # * The DN attribute type
-        # * The value of the constructor parameter
-        # * The name of the constructor parameter
-        self.dn_params = []
-        for param in check_params:
-            if param[0] in kwargs and param[1] is not None:
-                log.warn('Choosing %s over "%s"' % (param[0], param[1]))
-                delete kwargs[param[0]]
-
-            if param[1] is not None:
-                self.dn_params.append((param[0], param[1]))
-
-        self.dn_params.extend(kwargs.iteritems())
-        
-    def evaluate(self, environ, credentials):
-        super(X509DNPredicate, self).evaluate(environ, credentials)
-
-        # First let's try with Apache-like server variables, and last rely on
-        # the parsing of the DN itself.
-
-        try:
-            for suffix, value in self.dn_params:
-                self._check_server_variable(environ, value, '_' + suffix)
-        except KeyError:
-            pass
-
-        dn = environ.get(self.environ_key)
-        if dn is None:
-            self.unmet()
-
-        try:
-            parsed_dn = self.parse_dn(dn)
-        except:
-            self.unmet()
-        
-        if len(parsed_dn) == 0:
-            self.unmet()
-
-        try:
-            for key, value in self.dn_params:
-                self._check_parsed_dict(parsed_dn, key, value)
-        except KeyError:
-            self.unmet()
-
-    def _check_parsed_dict(self, parsed, key, value):
-        parsed_value = parsed[key]
-        if isinstance(value, list) or isinstance(value, tuple):
-            for v in value:
-                if v not in parsed_value:
-                    self.unmet()
-        
-        elif parsed_value[key] != value:
-            self.unmet()
-
-    def _check_server_variable(self, environ, suffix, value):
-        key = self.environ_key + suffix
-        if isinstance(value, list) or isinstance(value, tuple):
-            environ_values = []
-            for n in range(len(value)):
-                environ_values.append(environ[self.environ_key + '_' + str(n)])
-
-            for v in value:
-                if v not in environ_values:
-                    self.unmet()
-
-        elif environ[key] != value:
-            self.unmet()
-
-class is_issuer(X509DNPredicate):
-
-    ISSUER_KEY_DN = 'SSL_CLIENT_I_DN'
-
-    message = 'Invalid SSL client issuer.'
-
-    def __init__(self, common_name=None, organization=None,
-                 organization_unit=None, country=None, state=None,
-                 locality=None, issuer_key=None, **kwargs):
-        super(is_issuer, self).__init__(
-            common_name,
-            organization,
-            organization_unit,
-            country,
-            state,
-            locality,
-            issuer_key or self.ISSUER_KEY_DN
-            **kwargs
-        )
-
-
-
-class is_subject(X509DNPredicate):
-
-    SUBJECT_KEY_DN = 'SSL_CLIENT_S_DN'
-
-    message = 'Invalid SSL client subject.'
-    
-    def __init__(self, common_name=None, organization=None,
-                 organization_unit=None, country=None, state=None,
-                 locality=None, subject_key=None, **kwargs):
-        super(is_issuer, self).__init__(
-            common_name,
-            organization,
-            organization_unit,
-            country,
-            state,
-            locality,
-            subject_key or self.SUBJECT_KEY_DN
-            **kwargs
-        )
+        return creds
 
