@@ -56,10 +56,10 @@ class X509DNPredicate(X509Predicate):
                  state=None, locality=None, environ_key=None, **kwargs):
         if common_name is None and organization_unit is None and \
            organization is None and country is None and state is None and \
-           locality is None:
+           locality is None and len(kwargs) == 0:
             raise ValueError(('At least one of common_name, organization_unit,'
-                              ' organization, country, state, or locality '
-                              'parameters must have a value'))
+                              ' organization, country, state, locality, or one '
+                              'custom parameter must have a value'))
 
         field_and_values = (
             ('O', organization, 'organization'),
@@ -78,7 +78,7 @@ class X509DNPredicate(X509Predicate):
         super(X509DNPredicate, self).__init__(**kwargs)
 
         if self.environ_key is None or len(self.environ_key) == 0:
-            raise ValueError('This predicate requires an WSGI environ key')
+            raise ValueError('This predicate requires a WSGI environ key')
 
     def _prepare_dn_params_with_consistency(self, check_params, kwargs):
         # We prefer common_name over CN, for example
