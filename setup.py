@@ -24,7 +24,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 readme = open(os.path.join(here, 'README')).read()
 version = open(os.path.join(here, 'VERSION')).readline().strip()
 
-setup(name='repoze.what.plugins.x509',
+setup(name='repoze.what-x509',
       version=version,
       description='x509 repoze.what plugin',
       long_description=readme,
@@ -53,14 +53,12 @@ setup(name='repoze.what.plugins.x509',
           'repoze.what >= 1.0.9,<2.0',
           'python-dateutil < 2.0',
           'coverage',
-          'pyasn1 >= 0.1.2',
           'nose'
       ],
       install_requires=[
           'repoze.who >= 1.0.14,<2.0',
           'repoze.what >= 1.0.9,<2.0',
           'python-dateutil < 2.0',
-          'pyasn1 >= 0.1.2'
       ],
       test_suite='nose.collector',
       entry_points=''
