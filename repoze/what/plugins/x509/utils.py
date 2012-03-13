@@ -24,6 +24,7 @@ This module contains utilities related to repoze what x509 plugin.
 from dateutil.parser import parse as date_parse
 from dateutil.tz import tzutc
 from datetime import datetime
+import re
 
 
 VERIFY_KEY = 'SSL_CLIENT_VERIFY'
@@ -80,5 +81,5 @@ def verify_certificate(environ, verify_key, validity_start_key,
         return False
 
     now = datetime.utcnow().replace(tzinfo=_TZ_UTC)
-    return validity_start >= now <= validity_end:
+    return validity_start <= now <= validity_end
 

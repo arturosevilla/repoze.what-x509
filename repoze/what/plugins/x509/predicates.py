@@ -24,11 +24,10 @@ from .utils import *
 import re
 
 
-__all__ = ['is_user', 'is_issuer', 'X509Predicate', 'X509DNPredicate']
+__all__ = ['is_subject', 'is_issuer', 'X509Predicate', 'X509DNPredicate']
 
 
-class X509Predicate(Predicate)
-
+class X509Predicate(Predicate):
 
     def __init__(self, **kwargs):
         self.verify_key = kwargs.pop('verify_key', None) or VERIFY_KEY
@@ -90,7 +89,7 @@ class X509DNPredicate(X509Predicate):
         for param in check_params:
             if param[0] in kwargs and param[1] is not None:
                 log.warn('Choosing %s over "%s"' % (param[0], param[1]))
-                delete kwargs[param[0]]
+                del kwargs[param[0]]
 
             if param[1] is not None:
                 self.dn_params.append((param[0], param[1]))

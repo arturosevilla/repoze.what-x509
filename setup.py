@@ -52,17 +52,18 @@ setup(name='repoze.what-x509',
       include_package_data=True,
       zip_safe=True,
       tests_require=[
-          'repoze.who >= 1.0.14,<2.0',
-          'repoze.what >= 1.0.9,<2.0',
+          'repoze.who >= 1.0.14,<=1.99',
+          'repoze.what >= 1.0.9,<=1.99',
           'python-dateutil < 2.0',
           'coverage',
           'nose'
       ],
       install_requires=[
-          'repoze.who >= 1.0.14,<2.0',
-          'repoze.what >= 1.0.9,<2.0',
+          'repoze.who >= 1.0.14,<=1.99',
+          'repoze.what >= 1.0.9,<=1.99',
           'python-dateutil < 2.0',
       ],
+      setup_requires=['nose>=1.0'],
       test_suite='nose.collector',
       entry_points=''
 )
