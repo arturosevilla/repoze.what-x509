@@ -18,7 +18,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from setuptools import setup, find_packages
+from ez_setup import use_setuptools
 import os
+
+use_setuptools()
 
 here = os.path.abspath(os.path.dirname(__file__))
 readme = open(os.path.join(here, 'README')).read()

@@ -2,3 +2,4 @@
 .coverage
 *.swp
 *.egg-info
+*.pyc
