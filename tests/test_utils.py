@@ -19,6 +19,7 @@
 
 import unittest
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from repoze.what.plugins.x509.utils import *
 from tests import TestX509Base
 
@@ -44,10 +45,78 @@ class TestUtils(TestX509Base):
         self.assertEqual('state', parsed['ST'][0])
         self.assertEqual('locality', parsed['L'][0])
 
-    def test_verify_correct_certificate(self):
-        issuer = {}
-        subject = {}
-        environ = self.make_environ(issuer, subject)
+    def test_parsing_with_confusing_dn(self):
+        dn = self.generate_dn(
+            C='MX',
+            ST='Stuff/stuff',
+            L='Locality, local',
+            O='Organ., data',
+            OU='unit unit+unit',
+            CN='name',
+            emailAddress='weird@example.com'
+        )
+
+        parsed = parse_dn(dn)
+        self.assertEqual('MX', parsed['C'][0])
+        self.assertEqual('Stuff/stuff', parsed['ST'][0])
+        self.assertEqual('Locality, local', parsed['L'][0])
+        self.assertEqual('Organ., data', parsed['O'][0])
+        self.assertEqual('unit unit+unit', parsed['OU'][0])
+        self.assertEqual('name', parsed['CN'][0])
+
+    def test_multiple_values_for_dn(self):
+        dn = '/C=MX/C=US/ST=state/ST=secondstate'
+        parsed = parse_dn(dn)
+        assert 'MX' in parsed['C']
+        assert 'US' in parsed['C']
+        assert 'state' in parsed['ST']
+        assert 'secondstate' in parsed['ST']
+
+    def test_verify_incorrect_certificate(self):
+        environ = self.make_environ(
+            {'C': 'stuff'},
+            {'C': 'stuff'},
+            None,
+            None,
+            verified=False
+        )
+
+        assert not verify_certificate(
+            environ,
+            'SSL_CLIENT_VERIFY',
+            'SSL_CLIENT_V_START',
+            'SSL_CLIENT_V_END'
+        )
+
+    def test_verify_certificate_with_dates_other_than_utc(self):
+        start = datetime.utcnow() + relativedelta(months=-1)
+        end = datetime.utcnow() + relativedelta(months=11)
+
+        environ = self.make_environ(
+            {'C': 'stuff'},
+            {'C': 'stuff'},
+            start,
+            end
+        )
+
+        assert not verify_certificate(
+            environ,
+            'SSL_CLIENT_VERIFY',
+            'SSL_CLIENT_V_START',
+            'SSL_CLIENT_V_END'
+        )
+
+    def test_verify_certificate_with_invalid_date_range(self):
+        pass
+
+    def test_verify_certificate_without_dates(self):
+        environ = self.make_environ(
+            {'C': 'stuff'},
+            {'C': 'stuff'}
+        )
+
+        environ['SSL_CLIENT_V_START'] = None
+        environ['SSL_CLIENT_V_END'] = None
         assert verify_certificate(
             environ,
             'SSL_CLIENT_VERIFY',
@@ -55,4 +124,42 @@ class TestUtils(TestX509Base):
             'SSL_CLIENT_V_END'
         )
 
+    def test_verify_certificate_without_start_date(self):
+        environ = self.make_environ(
+            {'C': 'stuff'},
+            {'C': 'stuff'}
+        )
+
+        environ['SSL_CLIENT_V_START'] = None
+        assert verify_certificate(
+            environ,
+            'SSL_CLIENT_VERIFY',
+            'SSL_CLIENT_V_START',
+            'SSL_CLIENT_V_END'
+        )
+
+    def test_verify_certificate_without_end_date(self):
+        environ = self.make_environ(
+            {'C': 'stuff'},
+            {'C': 'stuff'}
+        )
+
+        environ['SSL_CLIENT_V_END'] = None
+        assert verify_certificate(
+            environ,
+            'SSL_CLIENT_VERIFY',
+            'SSL_CLIENT_V_START',
+            'SSL_CLIENT_V_END'
+        )
+
+    def test_verify_correct_certificate(self):
+        issuer = {'C': 'MX', 'ST': 'State', 'CN': 'name', 'O': 'org'}
+        subject = {'C': 'MX', 'ST': 'State', 'CN': 'issuer', 'O': 'ca'}
+        environ = self.make_environ(issuer, subject)
+        assert verify_certificate(
+            environ,
+            'SSL_CLIENT_VERIFY',
+            'SSL_CLIENT_V_START',
+            'SSL_CLIENT_V_END'
+        )
 

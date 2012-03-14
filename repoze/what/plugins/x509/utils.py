@@ -31,8 +31,9 @@ VERIFY_KEY = 'SSL_CLIENT_VERIFY'
 VALIDITY_START_KEY = 'SSL_CLIENT_V_START'
 VALIDITY_END_KEY = 'SSL_CLIENT_V_END'
 
-# Adapted the scan mechanism from Ruby's OpenSSL module
-_DN_SSL_REGEX = re.compile('\\s*([^\\/,]+)\\s*')
+# OpenSSL's DNs are separated by /, but the problem is that it may have any
+# escaped characters as value.
+_DN_SSL_REGEX = re.compile('(/\\s*\\w+=)')
 
 _TZ_UTC = tzutc()
 
@@ -49,12 +50,16 @@ def parse_dn(dn):
     "Multi-values" are not supported (e.g., O=company+CN=name).
     """
     parsed = {}
-    for match in _DN_SSL_REGEX.finditer(dn):
-        type_, value = match.group(0).split('=', 2)
+    split_string = _DN_SSL_REGEX.split(dn)
+    if split_string[0] == '':
+        split_string.pop(0)
+    for i in range(0, len(split_string), 2):
+        type_, value = split_string[i][1:-1], split_string[i + 1]
         if type_ not in parsed:
             parsed[type_] = []
         parsed[type_].append(value)
 
+    print parsed
     return parsed
 
 
