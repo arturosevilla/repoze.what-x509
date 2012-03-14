@@ -59,7 +59,6 @@ def parse_dn(dn):
             parsed[type_] = []
         parsed[type_].append(value)
 
-    print parsed
     return parsed
 
 

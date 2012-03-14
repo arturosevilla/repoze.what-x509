@@ -35,7 +35,7 @@ class X509Predicate(Predicate):
             VALIDITY_START_KEY
         self.validity_end_key = kwargs.pop('validity_end_key', None) or \
             VALIDITY_END_KEY
-        super(X509Predicate, self).__init__(**kwargs)
+        super(X509Predicate, self).__init__(msg=kwargs.get('msg'))
 
     def evaluate(self, environ, credentials):
         # Cannot assume every environment will have all mod_ssl CGI vars.
@@ -69,6 +69,7 @@ class X509DNPredicate(X509Predicate):
             ('L', locality, 'locality')
         )
 
+        self.log = kwargs.get('log')
         self._prepare_dn_params_with_consistency(
             field_and_values,
             kwargs
@@ -76,8 +77,10 @@ class X509DNPredicate(X509Predicate):
 
         super(X509DNPredicate, self).__init__(**kwargs)
 
-        if self.environ_key is None or len(self.environ_key) == 0:
+        if environ_key is None or len(environ_key) == 0:
             raise ValueError('This predicate requires a WSGI environ key')
+
+        self.environ_key = environ_key
 
     def _prepare_dn_params_with_consistency(self, check_params, kwargs):
         # We prefer common_name over CN, for example
@@ -88,7 +91,9 @@ class X509DNPredicate(X509Predicate):
         self.dn_params = []
         for param in check_params:
             if param[0] in kwargs and param[1] is not None:
-                log.warn('Choosing %s over "%s"' % (param[0], param[1]))
+                self.log and self.log.warn(
+                    'Choosing %s over "%s"' % (param[0], param[1])
+                )
                 del kwargs[param[0]]
 
             if param[1] is not None:
@@ -104,7 +109,7 @@ class X509DNPredicate(X509Predicate):
 
         try:
             for suffix, value in self.dn_params:
-                self._check_server_variable(environ, value, '_' + suffix)
+                self._check_server_variable(environ, '_' + suffix, value)
         except KeyError:
             pass
 
@@ -166,7 +171,7 @@ class is_issuer(X509DNPredicate):
             country,
             state,
             locality,
-            issuer_key or self.ISSUER_KEY_DN
+            issuer_key or self.ISSUER_KEY_DN,
             **kwargs
         )
 
@@ -181,14 +186,14 @@ class is_subject(X509DNPredicate):
     def __init__(self, common_name=None, organization=None,
                  organization_unit=None, country=None, state=None,
                  locality=None, subject_key=None, **kwargs):
-        super(is_issuer, self).__init__(
+        super(is_subject, self).__init__(
             common_name,
             organization,
             organization_unit,
             country,
             state,
             locality,
-            subject_key or self.SUBJECT_KEY_DN
+            subject_key or self.SUBJECT_KEY_DN,
             **kwargs
         )
 

@@ -24,6 +24,7 @@ Test suite for repoze.what-x509
 from dateutil.relativedelta import relativedelta
 from dateutil.tz import tzutc
 from datetime import datetime
+from repoze.what import predicates
 import unittest
 import locale
 
@@ -34,7 +35,7 @@ class TestX509Base(unittest.TestCase):
     def generate_dn(self, **kwargs):
         return ''.join(['/' + t + '=' +  v for t, v in kwargs.iteritems()])
 
-    def make_environ(self, issuer_dict, subject_dict, start=None, end=None,
+    def make_environ(self, issuer, subject, start=None, end=None,
                      verified=True,
                      verify_key='SSL_CLIENT_VERIFY',
                      validity_start_key='SSL_CLIENT_V_START',
@@ -55,11 +56,14 @@ class TestX509Base(unittest.TestCase):
         start, end = start.strftime(datefmt), end.strftime(datefmt)
 
         environ = {}
+        print verified
         environ[verify_key] = 'SUCCESS' if verified else 'FAILED'
         environ[validity_start_key] = start
         environ[validity_end_key] = end
-        environ[issuer_key] = self.generate_dn(**issuer_dict)
-        environ[subject_key] = self.generate_dn(**subject_dict)
+        environ[issuer_key] = issuer if isinstance(issuer, basestring) \
+                                     else self.generate_dn(**issuer)
+        environ[subject_key] = subject if isinstance(subject, basestring) \
+                                       else self.generate_dn(**subject)
 
         return environ
 
