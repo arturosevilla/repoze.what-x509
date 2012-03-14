@@ -56,7 +56,6 @@ class TestX509Base(unittest.TestCase):
         start, end = start.strftime(datefmt), end.strftime(datefmt)
 
         environ = {}
-        print verified
         environ[verify_key] = 'SUCCESS' if verified else 'FAILED'
         environ[validity_start_key] = start
         environ[validity_end_key] = end
