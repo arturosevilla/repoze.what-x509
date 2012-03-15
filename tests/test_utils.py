@@ -20,6 +20,7 @@
 import unittest
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from dateutil.tz import tzutc
 from repoze.what.plugins.x509.utils import *
 from tests import TestX509Base
 
@@ -72,6 +73,28 @@ class TestUtils(TestX509Base):
         assert 'state' in parsed['ST']
         assert 'secondstate' in parsed['ST']
 
+    def test_incomplete_value_for_attribute(self):
+        dn = '/C='
+        self.assertRaises(ValueError, parse_dn, dn)
+
+        dn = '/C=MX/CN='
+        self.assertRaises(ValueError, parse_dn, dn)
+
+    def test_malformed_attribute(self):
+        dn = '/Casdf'
+        self.assertRaises(ValueError, parse_dn, dn)
+
+    def test_no_dn_in_string(self):
+        dn = 'I am a regular string'
+        self.assertRaises(ValueError, parse_dn, dn)
+
+    def test_empty_string(self):
+        self.assertRaises(ValueError, parse_dn, '')
+
+    def test_invalid_value_at_attribute(self):
+        dn = '/C=MX/CN='
+        self.assertRaises(ValueError, parse_dn, dn)
+
     def test_verify_incorrect_certificate(self):
         environ = self.make_environ(
             {'C': 'stuff'},
@@ -107,7 +130,35 @@ class TestUtils(TestX509Base):
         )
 
     def test_verify_certificate_with_invalid_date_range(self):
-        pass
+        start = datetime.utcnow() + relativedelta(months=2)
+        start = start.replace(tzinfo=tzutc())
+        environ = self.make_environ(
+            '/C=MX',
+            '/C=MX',
+            start=start
+        )
+
+        assert not verify_certificate(
+            environ,
+            'SSL_CLIENT_VERIFY',
+            'SSL_CLIENT_V_START',
+            'SSL_CLIENT_V_END'
+        )
+
+        end = datetime.utcnow() + relativedelta(days=-5)
+        end = end.replace(tzinfo=tzutc())
+        environ = self.make_environ(
+            '/C=MX',
+            '/C=MX',
+            end=end
+        )
+
+        assert not verify_certificate(
+            environ,
+            'SSL_CLIENT_VERIFY',
+            'SSL_CLIENT_V_START',
+            'SSL_CLIENT_V_END'
+        )
 
     def test_verify_certificate_without_dates(self):
         environ = self.make_environ(

@@ -35,6 +35,30 @@ class _TestDNBase(TestX509Base):
     def get_error_message(self):
         return self.PREDICATE.message
 
+    def get_key_dn(self):
+        raise NotImplementedError()
+
+    def test_without_dn_value_in_environ(self):
+        predicate = self.PREDICATE(common_name='name')
+        environ = { 'SSL_CLIENT_VERIFY': 'SUCCESS' }
+        self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
+    def test_invalid_dn(self):
+        predicate = self.PREDICATE(common_name='name')
+        environ = self.make_environ_for_test(
+            to_test='invalid dn',
+            not_to_test={'CN': 'Name', 'C': 'US'}
+        )
+        self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
+    def test_dn_does_not_satisfy_predicate_incomplete(self):
+        predicate = self.PREDICATE(C='US')
+        environ = self.make_environ_for_test(
+            to_test = {'CN': 'Name', 'O': 'Company'},
+            not_to_test={'CN': 'Other', 'O': 'Company', 'C': 'US'}
+        )
+        self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
     def test_construct_predicate_without_args(self):
         self.assertRaises(ValueError, self.PREDICATE)
 
@@ -52,6 +76,45 @@ class _TestDNBase(TestX509Base):
         )
         self.eval_met_predicate(predicate, environ)
 
+    def test_common_name_server(self):
+        predicate = self.PREDICATE(common_name='NAME')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'Fail', 'C': 'US', 'ST': 'California',
+                     'O': 'Company'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'Company'}
+        )
+        environ[self.get_key_dn() + '_CN'] = 'NAME'
+        self.eval_met_predicate(predicate, environ)
+
+    def test_multiple_common_name_server(self):
+        predicate = self.PREDICATE(common_name=('NAME', 'Other'))
+        environ = self.make_environ_for_test(
+            to_test = '/CN=Nope/CN=Na/C=US/ST=California',
+            not_to_test={'CN': 'Other', 'C': 'US'}
+        )
+        environ[self.get_key_dn() + '_CN_0'] = 'NAME'
+        environ[self.get_key_dn() + '_CN_1'] = 'Other'
+        self.eval_met_predicate(predicate, environ)
+
+    def test_fail_multiple_common_name_server(self):
+        predicate = self.PREDICATE(common_name=('NAME', 'Other'))
+        environ = self.make_environ_for_test(
+            to_test = '/CN=NAME/CN=Other/C=US/ST=California',
+            not_to_test={'CN': 'Other', 'C': 'US'}
+        )
+        environ[self.get_key_dn() + '_CN_0'] = 'Nope'
+        environ[self.get_key_dn() + '_CN_1'] = 'Other'
+        self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
+    def test_fail_multiple_common_name(self):
+        predicate = self.PREDICATE(common_name=('NAME', 'Other'))
+        environ = self.make_environ_for_test(
+            to_test = '/CN=Fail/CN=Other/C=US/ST=California',
+            not_to_test={'CN': 'Other', 'C': 'US'}
+        )
+        self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
     def test_fail_common_name(self):
         predicate = self.PREDICATE(common_name='Fail')
         environ = self.make_environ_for_test(
@@ -60,6 +123,17 @@ class _TestDNBase(TestX509Base):
             not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
                          'O': 'Company'}
         )
+        self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
+    def test_fail_common_name_server(self):
+        predicate = self.PREDICATE(common_name='Fail')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'Fail', 'C': 'US', 'ST': 'California',
+                     'O': 'Company'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'Company'}
+        )
+        environ[self.get_key_dn() + '_CN'] = 'NAME'
         self.eval_unmet_predicate(predicate, environ, self.get_error_message())
 
     def test_choose_common_name_over_CN(self):
@@ -81,6 +155,16 @@ class _TestDNBase(TestX509Base):
         )
         self.eval_met_predicate(predicate, environ)
 
+    def test_organization_server(self):
+        predicate = self.PREDICATE(organization='ORG')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'asdf', 'C': 'US', 'ST': 'California', 'O': 'FAIL'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'Company'}
+        )
+        environ[self.get_key_dn() + '_O'] = 'ORG'
+        self.eval_met_predicate(predicate, environ)
+
     def test_fail_organization(self):
         predicate = self.PREDICATE(organization='FAIL')
         environ = self.make_environ_for_test(
@@ -88,6 +172,16 @@ class _TestDNBase(TestX509Base):
             not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
                          'O': 'Company'}
         )
+        self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
+    def test_fail_organization_server(self):
+        predicate = self.PREDICATE(organization='FAIL')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'asdf', 'C': 'US', 'ST': 'California', 'O': 'FAIL'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'Company'}
+        )
+        environ[self.get_key_dn() + '_O'] = 'ORG'
         self.eval_unmet_predicate(predicate, environ, self.get_error_message())
 
     def test_choose_organization_over_O(self):
@@ -110,6 +204,17 @@ class _TestDNBase(TestX509Base):
         )
         self.eval_met_predicate(predicate, environ)
 
+    def test_organization_unit_server(self):
+        predicate = self.PREDICATE(organization_unit='Unit')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'asdf', 'C': 'US', 'ST': 'California',
+                     'OU': 'FAIL'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'OU': 'Unit'}
+        )
+        environ[self.get_key_dn() + '_OU'] = 'Unit'
+        self.eval_met_predicate(predicate, environ)
+
     def test_fail_organization_unit(self):
         predicate = self.PREDICATE(organization_unit='FAIL')
         environ = self.make_environ_for_test(
@@ -118,6 +223,17 @@ class _TestDNBase(TestX509Base):
             not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
                          'OU': 'Unit'}
         )
+        self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
+    def test_fail_organization_unit_server(self):
+        predicate = self.PREDICATE(organization_unit='FAIL')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'asdf', 'C': 'US', 'ST': 'California',
+                     'OU': 'FAIL'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'OU': 'Unit'}
+        )
+        environ[self.get_key_dn() + '_OU'] = 'Unit'
         self.eval_unmet_predicate(predicate, environ, self.get_error_message())
 
     def test_choose_organization_unit_over_OU(self):
@@ -140,6 +256,17 @@ class _TestDNBase(TestX509Base):
         )
         self.eval_met_predicate(predicate, environ)
 
+    def test_country_server(self):
+        predicate = self.PREDICATE(country='US')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'Name', 'C': 'FA', 'ST': 'California',
+                     'O': 'Company'},
+            not_to_test={'CN': 'Other', 'C': 'MX', 'ST': 'California',
+                         'O': 'Company'}
+        )
+        environ[self.get_key_dn() + '_C'] = 'US'
+        self.eval_met_predicate(predicate, environ)
+
     def test_fail_country(self):
         predicate = self.PREDICATE(country='FA')
         environ = self.make_environ_for_test(
@@ -148,6 +275,17 @@ class _TestDNBase(TestX509Base):
             not_to_test={'CN': 'Other', 'C': 'MX', 'ST': 'California',
                          'O': 'Company'}
         )
+        self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
+    def test_fail_country_server(self):
+        predicate = self.PREDICATE(country='FA')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'Name', 'C': 'FA', 'ST': 'California',
+                     'O': 'Company'},
+            not_to_test={'CN': 'Other', 'C': 'MX', 'ST': 'California',
+                         'O': 'Company'}
+        )
+        environ[self.get_key_dn() + '_C'] = 'US'
         self.eval_unmet_predicate(predicate, environ, self.get_error_message())
     
     def test_choose_country_over_C(self):
@@ -169,6 +307,16 @@ class _TestDNBase(TestX509Base):
         )
         self.eval_met_predicate(predicate, environ)
 
+    def test_state_server(self):
+        predicate = self.PREDICATE(state='State')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'name', 'C': 'US', 'ST': 'Would fail', 'O': 'Company'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'Company'}
+        )
+        environ[self.get_key_dn() + '_ST'] = 'State'
+        self.eval_met_predicate(predicate, environ)
+
     def test_fail_state(self):
         predicate = self.PREDICATE(state='FAIL')
         environ = self.make_environ_for_test(
@@ -177,6 +325,17 @@ class _TestDNBase(TestX509Base):
                          'O': 'Company'}
         )
         self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
+    def test_fail_state_server(self):
+        predicate = self.PREDICATE(state='FAIL')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'name', 'C': 'US', 'ST': 'FAIL', 'O': 'Company'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'Company'}
+        )
+        environ[self.get_key_dn() + '_ST'] = 'State'
+        self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
 
     def test_choose_state_over_ST(self):
         predicate = self.PREDICATE(state='California', ST='Washington')
@@ -198,6 +357,17 @@ class _TestDNBase(TestX509Base):
         )
         self.eval_met_predicate(predicate, environ)
 
+    def test_locality_server(self):
+        predicate = self.PREDICATE(locality='San Diego')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'NAME', 'C': 'US', 'ST': 'California',
+                     'L': 'would fail'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'org', 'L': 'L'}
+        )
+        environ[self.get_key_dn() + '_L'] = 'San Diego'
+        self.eval_met_predicate(predicate, environ)
+
     def test_fail_locality(self):
         predicate = self.PREDICATE(locality='FAIL')
         environ = self.make_environ_for_test(
@@ -206,6 +376,17 @@ class _TestDNBase(TestX509Base):
             not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
                          'O': 'org', 'L': 'L'}
         )
+        self.eval_unmet_predicate(predicate, environ, self.get_error_message())
+
+    def test_fail_locality_server(self):
+        predicate = self.PREDICATE(locality='FAIL')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'NAME', 'C': 'US', 'ST': 'California',
+                     'L': 'FAIL'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'org', 'L': 'L'}
+        )
+        environ[self.get_key_dn() + '_L'] = 'San Diego'
         self.eval_unmet_predicate(predicate, environ, self.get_error_message())
 
     def test_choose_locality_over_L(self):
@@ -226,6 +407,18 @@ class _TestDNBase(TestX509Base):
             not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
                          'O': 'Company'}
         )
+        self.eval_met_predicate(predicate, environ)
+
+    def test_additional_arguments_server(self):
+        predicate = self.PREDICATE(Email='email', Other='other')
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'NAME', 'C': 'US', 'ST': 'California',
+                     'O': 'Company', 'Email': 'fail', 'Other': 'fail'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'Company'}
+        )
+        environ[self.get_key_dn() + '_Email'] = 'email'
+        environ[self.get_key_dn() + '_Other'] = 'other'
         self.eval_met_predicate(predicate, environ)
 
     def test_fail_additional_arguments(self):
@@ -295,6 +488,9 @@ class TestIsSubject(_TestDNBase):
             **kwargs
         )
 
+    def get_key_dn(self):
+        return is_subject.SUBJECT_KEY_DN
+
 
 class TestX509DNPredicate(TestX509Base):
 
@@ -323,4 +519,7 @@ class TestIsIssuer(_TestDNBase):
             not_to_test,
             **kwargs
         )
+
+    def get_key_dn(self):
+        return is_issuer.ISSUER_KEY_DN
 

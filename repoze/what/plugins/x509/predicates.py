@@ -106,12 +106,14 @@ class X509DNPredicate(X509Predicate):
 
         # First let's try with Apache-like server variables, and last rely on
         # the parsing of the DN itself.
-
         try:
             for suffix, value in self.dn_params:
                 self._check_server_variable(environ, '_' + suffix, value)
         except KeyError:
             pass
+        else:
+            # Every environ variable is valid
+            return
 
         dn = environ.get(self.environ_key)
         if dn is None:
@@ -122,9 +124,6 @@ class X509DNPredicate(X509Predicate):
         except:
             self.unmet()
         
-        if len(parsed_dn) == 0:
-            self.unmet()
-
         try:
             for key, value in self.dn_params:
                 self._check_parsed_dict(parsed_dn, key, value)
@@ -146,7 +145,7 @@ class X509DNPredicate(X509Predicate):
         if isinstance(value, list) or isinstance(value, tuple):
             environ_values = []
             for n in range(len(value)):
-                environ_values.append(environ[self.environ_key + '_' + str(n)])
+                environ_values.append(environ[key + '_' + str(n)])
 
             for v in value:
                 if v not in environ_values:

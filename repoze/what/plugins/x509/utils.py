@@ -33,6 +33,7 @@ VALIDITY_END_KEY = 'SSL_CLIENT_V_END'
 
 # OpenSSL's DNs are separated by /, but the problem is that it may have any
 # escaped characters as value.
+# Thanks to David Esperanza
 _DN_SSL_REGEX = re.compile('(/\\s*\\w+=)')
 
 _TZ_UTC = tzutc()
@@ -54,10 +55,20 @@ def parse_dn(dn):
     if split_string[0] == '':
         split_string.pop(0)
     for i in range(0, len(split_string), 2):
-        type_, value = split_string[i][1:-1], split_string[i + 1]
+        try:
+            type_, value = split_string[i][1:-1], split_string[i + 1]
+        except IndexError:
+            raise ValueError('Invalid DN')
+
+        if len(value) == 0:
+            raise ValueError('Invalid DN: Invalid value')
+
         if type_ not in parsed:
             parsed[type_] = []
         parsed[type_].append(value)
+
+    if len(parsed) == 0:
+        raise ValueError('Invalid DN: Empty DN')
 
     return parsed
 
