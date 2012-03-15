@@ -37,6 +37,7 @@ class TestX509Base(unittest.TestCase):
 
     def make_environ(self, issuer, subject, start=None, end=None,
                      verified=True,
+                     prefix=None,
                      verify_key='SSL_CLIENT_VERIFY',
                      validity_start_key='SSL_CLIENT_V_START',
                      validity_end_key='SSL_CLIENT_V_END',
@@ -44,6 +45,7 @@ class TestX509Base(unittest.TestCase):
                      subject_key='SSL_CLIENT_S_DN'):
         # By default consider that our certificate was signed a month ago for
         # the common validity of one year.
+        prefix = prefix or ''
         if start is None:
             start = datetime.utcnow() + relativedelta(months=-1)
             start = start.replace(tzinfo=tzutc())
@@ -57,12 +59,13 @@ class TestX509Base(unittest.TestCase):
 
         environ = {}
         environ[verify_key] = 'SUCCESS' if verified else 'FAILED'
-        environ[validity_start_key] = start
-        environ[validity_end_key] = end
-        environ[issuer_key] = issuer if isinstance(issuer, basestring) \
-                                     else self.generate_dn(**issuer)
-        environ[subject_key] = subject if isinstance(subject, basestring) \
-                                       else self.generate_dn(**subject)
+        environ[prefix + validity_start_key] = start
+        environ[prefix + validity_end_key] = end
+        environ[prefix + issuer_key] = issuer if isinstance(issuer, basestring)\
+                                       else self.generate_dn(**issuer)
+        environ[prefix + subject_key] = subject if isinstance(
+            subject,
+            basestring) else self.generate_dn(**subject)
 
         return environ
 

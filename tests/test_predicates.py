@@ -87,6 +87,7 @@ class _TestDNBase(TestX509Base):
         environ[self.get_key_dn() + '_CN'] = 'NAME'
         self.eval_met_predicate(predicate, environ)
 
+
     def test_multiple_common_name_server(self):
         predicate = self.PREDICATE(common_name=('NAME', 'Other'))
         environ = self.make_environ_for_test(
@@ -491,6 +492,34 @@ class TestIsSubject(_TestDNBase):
     def get_key_dn(self):
         return is_subject.SUBJECT_KEY_DN
 
+    def test_common_name_different_key(self):
+        predicate = is_subject(
+            common_name='NAME',
+            subject_key='HTTP_SSL_CLIENT_S_DN'
+        )
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'NAME', 'C': 'US', 'ST': 'California',
+                     'O': 'Company'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'Company'},
+            prefix='HTTP_'
+        )
+        self.eval_met_predicate(predicate, environ)
+
+    def test_common_name_different_key_server(self):
+        predicate = is_subject(
+            common_name='NAME',
+            subject_key='HTTP_SSL_CLIENT_S_DN'
+        )
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'Fail', 'C': 'US', 'ST': 'California',
+                     'O': 'Company'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'Company'},
+            prefix='HTTP_'
+        )
+        environ['HTTP_SSL_CLIENT_S_DN_CN'] = 'NAME'
+        self.eval_met_predicate(predicate, environ)
 
 class TestX509DNPredicate(TestX509Base):
 
@@ -522,4 +551,33 @@ class TestIsIssuer(_TestDNBase):
 
     def get_key_dn(self):
         return is_issuer.ISSUER_KEY_DN
+
+    def test_common_name_different_key(self):
+        predicate = is_issuer(
+            common_name='NAME',
+            issuer_key='HTTP_SSL_CLIENT_I_DN'
+        )
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'NAME', 'C': 'US', 'ST': 'California',
+                     'O': 'Company'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'Company'},
+            prefix='HTTP_'
+        )
+        self.eval_met_predicate(predicate, environ)
+
+    def test_common_name_different_key_server(self):
+        predicate = is_issuer(
+            common_name='NAME',
+            issuer_key='HTTP_SSL_CLIENT_I_DN'
+        )
+        environ = self.make_environ_for_test(
+            to_test={'CN': 'Fail', 'C': 'US', 'ST': 'California',
+                     'O': 'Company'},
+            not_to_test={'CN': 'Other', 'C': 'US', 'ST': 'California',
+                         'O': 'Company'},
+            prefix='HTTP_'
+        )
+        environ['HTTP_SSL_CLIENT_I_DN_CN'] = 'NAME'
+        self.eval_met_predicate(predicate, environ)
 
