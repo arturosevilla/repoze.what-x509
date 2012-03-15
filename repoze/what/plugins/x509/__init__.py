@@ -53,7 +53,7 @@ class X509Identifier(object):
         self.end_key = end_key
         self.multiple_values = multiple_values
         if classifications is not None:
-            self.classifications = classifications
+            self.classifications[IIdentifier] = classifications
 
     # IIdentifier
     def identify(self, environ):
@@ -79,11 +79,11 @@ class X509Identifier(object):
             except:
                 login = None
         else:
-            logins = []
+            values = []
             try:
                 n = 0
                 while True:
-                    logins.append(environ[key + '_' + n])
+                    values.append(environ[key + '_' + str(n)])
                     n += 1
             except KeyError:
                 pass
@@ -91,7 +91,7 @@ class X509Identifier(object):
             if n == 0:
                 login = [login]
             else:
-                login = logins
+                login = values
                 
 
         if login is None:
@@ -105,4 +105,15 @@ class X509Identifier(object):
             creds['login'] = login
 
         return creds
+
+    # IIdentifier
+    def forget(self, environ, identity):
+        # We can't forget
+        return None
+
+    # IIdentifier
+    def remember(self, environ, identity):
+        # We always remember as it is provided by the server
+        return None
+
 
