@@ -136,6 +136,8 @@ will include the necessary ones for proxying the request::
 
     </VirtualHost>
 
+.. _headers:
+
 Headers modification
 --------------------
 

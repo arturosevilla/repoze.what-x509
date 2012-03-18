@@ -107,6 +107,7 @@ Contents
 
    changes
    configuration
+   advanced
 
 Indices and tables
 ==================
