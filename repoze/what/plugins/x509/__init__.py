@@ -45,6 +45,21 @@ class X509Identifier(object):
                  start_key=VALIDITY_START_KEY, end_key=VALIDITY_END_KEY,
                  classifications=None):
         """
+        :param subject_dn_key: The WSGI environment key for the subject
+            distinguished name (it also works as the base for the server
+            variables).
+        :param login_field: The field of the distinguished name that will use
+            to recognize the user.
+        :param multiple_values: Determines if we allow to have multiple values
+            in the ``login_field``.
+        :param verify_key: The WSGI environment key where it can check if the
+            client certificate is valid.
+        :param start_key: The WSGI environment key with the encoded datetime of
+            the start of the validity range.
+        :param end_key: The WSGI environment key with the encoded datetime of
+            the end of the validity range.
+        :param classifications: The ``repoze.who`` classifications for this
+            identifier (used with the classifier).
         """
         self.subject_dn_key = subject_dn_key
         self.login_field = login_field
@@ -59,6 +74,8 @@ class X509Identifier(object):
     def identify(self, environ):
         """
         Gets the credentials for this request.
+    
+        :param environ: The WSGI environment.
         """
         subject_dn = environ.get(self.subject_dn_key)
         if subject_dn is None or not verify_certificate(
@@ -108,11 +125,17 @@ class X509Identifier(object):
 
     # IIdentifier
     def forget(self, environ, identity):
+        """
+        Not used. We can't forget because it is client certificated based.
+        """
         # We can't forget
         return None
 
     # IIdentifier
     def remember(self, environ, identity):
+        """
+        Not used. The browser always remembers the client credentials.
+        """
         # We always remember as it is provided by the server
         return None
 
