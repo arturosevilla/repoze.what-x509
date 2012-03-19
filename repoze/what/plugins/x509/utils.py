@@ -49,6 +49,10 @@ def parse_dn(dn):
     type).
 
     "Multi-values" are not supported (e.g., O=company+CN=name).
+    
+    :param dn: The distinguished name.
+    
+    :raise ValueError: When you input an invalid or empty distinguished name.
     """
     parsed = {}
     split_string = _DN_SSL_REGEX.split(dn)
@@ -78,6 +82,14 @@ def verify_certificate(environ, verify_key, validity_start_key,
     """
     Checks if the client certificate is valid. Start and end data is optional,
     as not all SSL mods give that information.
+
+    :param environ: The WSGI environment.
+    :param verify_key: The key for the value in the environment where it was
+        stored if the certificate is valid or not.
+    :param validity_start_key: The key for the value in the environment with
+        the encoded datetime that indicates the start of the validity range.
+    :param validity_end_key: The key for the value in the environment with the
+        encoded datetime that indicates the end of the validity range.
     """
     verified = environ.get(verify_key)
     validity_start = environ.get(validity_start_key)

@@ -70,3 +70,36 @@ Rules for predicate evaluation
    distinguished name, for which the same rules to point #4 will be applied.
 6. If there is an error in the parsing, then the predicate will fail.
 
+API
+===
+
+.. py:module:: repoze.what.plugins.x509
+
+x509
+------------------------
+.. autoclass:: repoze.what.plugins.x509.X509Identifier
+   :members:
+
+.. py:module:: repoze.what.plugins.x509.predicates
+
+predicates
+-----------------------------------
+.. autoclass:: repoze.what.plugins.x509.X509Predicate
+   :members:
+   :special-members:
+.. autoclass:: repoze.what.plugins.x509.X509DNPredicate
+   :members:
+   :special-members:
+.. autoclass:: repoze.what.plugins.x509.is_issuer
+   :members:
+   :special-members:
+.. autoclass:: repoze.what.plugins.x509.is_subject
+   :members:
+   :special-members:
+
+.. py:module:: repoze.what.plugins.x509.utils
+
+utils
+-----
+.. autofunction:: repoze.what.plugins.x509.utils.parse_dn
+.. autofunction:: repoze.what.plugins.x509.utils.verify_certificate

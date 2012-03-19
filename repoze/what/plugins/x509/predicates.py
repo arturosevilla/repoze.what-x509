@@ -28,8 +28,27 @@ __all__ = ['is_subject', 'is_issuer', 'X509Predicate', 'X509DNPredicate']
 
 
 class X509Predicate(Predicate):
+    """
+    Represents a predicate based on the X.509 protocol. It can be evaluated,
+    although it can only check that is a valid client certificate.
+
+    Users must use a subclass or inherit from it.
+    """
 
     def __init__(self, **kwargs):
+        """
+
+        :param verify_key: The WSGI environment key that specify if the client
+            certificate is valid or not. A value of 'SUCCESS' will make it
+            valid. If you don't specify a key, then the value that it will take
+            is by default ``SSL_CLIENT_VERIFY``
+        :param validity_start_key: The WSGI environment key that specifies the
+            encoded datetime that indicates the start of the validity range.
+            If the timezone is not UTC (or GMT), it will fail.
+        :param validity_end_key: The WSGI environment key that specifies the
+            encoded datetime that indicates the end of the validity range.
+            If the timezone is not UTC (or GMT), it will fail.
+        """
         self.verify_key = kwargs.pop('verify_key', None) or VERIFY_KEY
         self.validity_start_key = kwargs.pop('validity_start_key', None) or \
             VALIDITY_START_KEY
@@ -38,6 +57,15 @@ class X509Predicate(Predicate):
         super(X509Predicate, self).__init__(msg=kwargs.get('msg'))
 
     def evaluate(self, environ, credentials):
+        """
+        Evaluates the predicate. A subclass should override this method however
+        call it before doing its custom code.
+
+        :param environ: The WSGI environment.
+        :param credentials: The user credentials. These will not be used
+
+        :raise NotAuthorizedError: If the predicate is not met.
+        """
         # Cannot assume every environment will have all mod_ssl CGI vars.
         if not verify_certificate(
             environ,
@@ -49,10 +77,34 @@ class X509Predicate(Predicate):
 
 
 class X509DNPredicate(X509Predicate):
+    """
+    Represents a predicate that evaluates a distinguished name encoded in a
+    OpenSSL X.509 DN string. It evaluates according to the properties
+    specified.
+    """
 
     def __init__(self, common_name=None, organization=None,
                  organization_unit=None, country=None,
                  state=None, locality=None, environ_key=None, **kwargs):
+        """
+        :param common_name: The common name of the distinguished name.
+        :param organization: The organization of the distinguished name.
+        :param organization_unit: The organization unit of the distinguished
+            name.
+        :param country: ISO-3166-1 alpha-2 encoding of the country of the
+            distinguished name.
+        :param state: The state within the country of the distinguished name.
+        :param locality: The locality or city of the distinguished name.
+        :param environ_key: The WSGI environment key of where the distinguished
+            name is located.
+        :param kwargs: You can specify a custom attribute type. The name of the
+            key will count as the type, and the value is what is going to be
+            checked against.
+
+        :raise ValueError: When you don't specify at least one value for the
+            parameters, including any custom one; or, when you don't specify an
+            ``environ_key``.
+        """
         if common_name is None and organization_unit is None and \
            organization is None and country is None and state is None and \
            locality is None and len(kwargs) == 0:
@@ -102,6 +154,17 @@ class X509DNPredicate(X509Predicate):
         self.dn_params.extend(kwargs.iteritems())
         
     def evaluate(self, environ, credentials):
+        """
+        Evaluates a distinguished name or the server variables that represents
+        it, already parsed. First it checks for the server variables, and then
+        it tries to parse the distinguished name. See the documentation for
+        more information.
+        
+        :param environ: The WSGI environment.
+        :param credentials: The user credentials. This parameter is not used.
+
+        :raise NotAuthorizedError: When the evaluation fails.
+        """
         super(X509DNPredicate, self).evaluate(environ, credentials)
 
         # First let's try with Apache-like server variables, and last rely on
@@ -155,6 +218,9 @@ class X509DNPredicate(X509Predicate):
             self.unmet()
 
 class is_issuer(X509DNPredicate):
+    """
+    Represents a predicate that evaluates the issuer distinguished name.
+    """
 
     ISSUER_KEY_DN = 'SSL_CLIENT_I_DN'
 
@@ -177,6 +243,9 @@ class is_issuer(X509DNPredicate):
 
 
 class is_subject(X509DNPredicate):
+    """
+    Represents a predicate that evalutes the subject distinguished name.
+    """
 
     SUBJECT_KEY_DN = 'SSL_CLIENT_S_DN'
 
