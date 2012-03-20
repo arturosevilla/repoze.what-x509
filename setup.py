@@ -32,7 +32,7 @@ setup(name='repoze.what-x509',
       description='x509 repoze.what plugin',
       long_description=readme,
       classifiers=[
-          'Development Status :: 3 - Alpha',
+          'Development Status :: 4 - Beta',
           'Environment :: Web Environment',
           'License :: OSI Approved :: BSD License',
           'Intended Audience :: Developers',

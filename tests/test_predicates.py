@@ -195,8 +195,8 @@ class _TestDNBase(TestX509Base):
         )
         self.eval_met_predicate(predicate, environ)
 
-    def test_organization_unit(self):
-        predicate = self.PREDICATE(organization_unit='Unit')
+    def test_organizational_unit(self):
+        predicate = self.PREDICATE(organizational_unit='Unit')
         environ = self.make_environ_for_test(
             to_test={'CN': 'asdf', 'C': 'US', 'ST': 'California',
                      'OU': 'Unit'},
@@ -205,8 +205,8 @@ class _TestDNBase(TestX509Base):
         )
         self.eval_met_predicate(predicate, environ)
 
-    def test_organization_unit_server(self):
-        predicate = self.PREDICATE(organization_unit='Unit')
+    def test_organizational_unit_server(self):
+        predicate = self.PREDICATE(organizational_unit='Unit')
         environ = self.make_environ_for_test(
             to_test={'CN': 'asdf', 'C': 'US', 'ST': 'California',
                      'OU': 'FAIL'},
@@ -216,8 +216,8 @@ class _TestDNBase(TestX509Base):
         environ[self.get_key_dn() + '_OU'] = 'Unit'
         self.eval_met_predicate(predicate, environ)
 
-    def test_fail_organization_unit(self):
-        predicate = self.PREDICATE(organization_unit='FAIL')
+    def test_fail_organizational_unit(self):
+        predicate = self.PREDICATE(organizational_unit='FAIL')
         environ = self.make_environ_for_test(
             to_test={'CN': 'asdf', 'C': 'US', 'ST': 'California',
                      'OU': 'Unit'},
@@ -226,8 +226,8 @@ class _TestDNBase(TestX509Base):
         )
         self.eval_unmet_predicate(predicate, environ, self.get_error_message())
 
-    def test_fail_organization_unit_server(self):
-        predicate = self.PREDICATE(organization_unit='FAIL')
+    def test_fail_organizational_unit_server(self):
+        predicate = self.PREDICATE(organizational_unit='FAIL')
         environ = self.make_environ_for_test(
             to_test={'CN': 'asdf', 'C': 'US', 'ST': 'California',
                      'OU': 'FAIL'},
@@ -237,8 +237,8 @@ class _TestDNBase(TestX509Base):
         environ[self.get_key_dn() + '_OU'] = 'Unit'
         self.eval_unmet_predicate(predicate, environ, self.get_error_message())
 
-    def test_choose_organization_unit_over_OU(self):
-        predicate = self.PREDICATE(organization_unit='Org U', OU='OU')
+    def test_choose_organizational_unit_over_OU(self):
+        predicate = self.PREDICATE(organizational_unit='Org U', OU='OU')
         environ = self.make_environ_for_test(
             to_test={'CN': 'Name', 'C': 'US', 'ST': 'California',
                      'O': 'Company', 'OU': 'Org U'},

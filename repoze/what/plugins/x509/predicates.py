@@ -84,12 +84,12 @@ class X509DNPredicate(X509Predicate):
     """
 
     def __init__(self, common_name=None, organization=None,
-                 organization_unit=None, country=None,
+                 organizational_unit=None, country=None,
                  state=None, locality=None, environ_key=None, **kwargs):
         """
         :param common_name: The common name of the distinguished name.
         :param organization: The organization of the distinguished name.
-        :param organization_unit: The organization unit of the distinguished
+        :param organizational_unit: The organization unit of the distinguished
             name.
         :param country: ISO-3166-1 alpha-2 encoding of the country of the
             distinguished name.
@@ -105,17 +105,19 @@ class X509DNPredicate(X509Predicate):
             parameters, including any custom one; or, when you don't specify an
             ``environ_key``.
         """
-        if common_name is None and organization_unit is None and \
+        if common_name is None and organizational_unit is None and \
            organization is None and country is None and state is None and \
            locality is None and len(kwargs) == 0:
-            raise ValueError(('At least one of common_name, organization_unit,'
+            raise ValueError(('At least one of common_name, organizational_unit,'
                               ' organization, country, state, locality, or one '
                               'custom parameter must have a value'))
+
+        super(X509DNPredicate, self).__init__(**kwargs)
 
         field_and_values = (
             ('O', organization, 'organization'),
             ('CN', common_name, 'common_name'),
-            ('OU', organization_unit, 'organization_unit'),
+            ('OU', organizational_unit, 'organizational_unit'),
             ('C', country, 'country'),
             ('ST', state, 'state'),
             ('L', locality, 'locality')
@@ -126,8 +128,6 @@ class X509DNPredicate(X509Predicate):
             field_and_values,
             kwargs
         )
-
-        super(X509DNPredicate, self).__init__(**kwargs)
 
         if environ_key is None or len(environ_key) == 0:
             raise ValueError('This predicate requires a WSGI environ key')
@@ -150,6 +150,12 @@ class X509DNPredicate(X509Predicate):
 
             if param[1] is not None:
                 self.dn_params.append((param[0], param[1]))
+
+        for param in ('validity_start_key', 'validity_end_key', 'verify_key'):
+            try:
+                del kwargs[param]
+            except:
+                pass
 
         self.dn_params.extend(kwargs.iteritems())
         
@@ -227,12 +233,12 @@ class is_issuer(X509DNPredicate):
     message = 'Invalid SSL client issuer.'
 
     def __init__(self, common_name=None, organization=None,
-                 organization_unit=None, country=None, state=None,
+                 organizational_unit=None, country=None, state=None,
                  locality=None, issuer_key=None, **kwargs):
         super(is_issuer, self).__init__(
             common_name,
             organization,
-            organization_unit,
+            organizational_unit,
             country,
             state,
             locality,
@@ -252,12 +258,12 @@ class is_subject(X509DNPredicate):
     message = 'Invalid SSL client subject.'
     
     def __init__(self, common_name=None, organization=None,
-                 organization_unit=None, country=None, state=None,
+                 organizational_unit=None, country=None, state=None,
                  locality=None, subject_key=None, **kwargs):
         super(is_subject, self).__init__(
             common_name,
             organization,
-            organization_unit,
+            organizational_unit,
             country,
             state,
             locality,
