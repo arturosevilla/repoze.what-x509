@@ -20,7 +20,7 @@
 This module contains all the predicates related to x.509 authorization.
 """
 from repoze.what.predicates import Predicate
-from .utils import *
+from repoze.who.plugins.x509.utils import *
 import re
 
 

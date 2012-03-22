@@ -54,6 +54,7 @@ setup(name='repoze.what-x509',
       tests_require=[
           'repoze.who >= 1.0.14,<=1.99',
           'repoze.what >= 1.0.9,<=1.99',
+          'repoze.who-x509 >= 0.2',
           'python-dateutil < 2.0',
           'coverage',
           'nose'
@@ -61,6 +62,7 @@ setup(name='repoze.what-x509',
       install_requires=[
           'repoze.who >= 1.0.14,<=1.99',
           'repoze.what >= 1.0.9,<=1.99',
+          'repoze.who-x509 >= 0.2',
           'python-dateutil < 2.0',
       ],
       setup_requires=['nose>=1.0'],
