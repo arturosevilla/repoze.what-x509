@@ -145,8 +145,7 @@ However, in your backend server the WSGI environment variables will not be
 named with the default ``mod_ssl`` key, instead they will be prefixed by HTTP\_
 (after all they are passed as custom HTTP headers). For example
 ``SSL_CLIENT_S_DN`` will become ``HTTP_SSL_CLIENT_S_DN``, so you will have to
-be careful when using the predicates or the identifier of
-:mod:`repoze.what.plugins.x509`::
+be careful when using the predicates of :mod:`repoze.what.plugins.x509`::
 
     from repoze.what.plugins.x509 import is_subject
 
@@ -201,6 +200,6 @@ configuration file::
 
 As with Apache's configuration, your headers will not be as specified, but
 prefixed with HTTP\_, and you will need to specify your ``subject_key`` or
-``issuer_key`` with the predicates and the identifier. See `Headers
+``issuer_key`` with the predicates. See `Headers
 modification`_ for an example of this configuration.
 
