@@ -79,26 +79,6 @@ predicates.
 You will need to setup Apache or Nginx (or any other server) to work with SSL
 client certificates. See :doc:`configuration` for examples.
 
-If you want to use the ``IIdentifier`` object, then you can build it as
-follows, and the pass it to the ``identifiers`` parameter of
-``repoze.who.middleware.PluggableAuthenticationMiddleware``::
-    
-    from repoze.what.plugins.x509 import X509Identifier
-
-    identifer = X509Identifier('SSL_CLIENT_S_DN')
-
-The required parameter of :py:class:`X509Identifier` is the WSGI environment
-key of the "distinguished name" of the client certificate subject. By default
-the credentials are based on the "Email" field, but it can be customized as
-follows::
-
-    from repoze.what.plugis.x509 import X509Identifier
-
-    identifier = X509Identifier('SSL_CLIENT_S_DN', login_field='CN')
-
-In this case it will try to get the credentials from the common name of the
-client certificate subject.
-
 Contents
 ========
 

@@ -75,11 +75,6 @@ API
 
 .. py:module:: repoze.what.plugins.x509
 
-x509
-------------------------
-.. autoclass:: repoze.what.plugins.x509.X509Identifier
-   :members:
-
 .. py:module:: repoze.what.plugins.x509.predicates
 
 predicates
@@ -97,9 +92,3 @@ predicates
    :members:
    :special-members:
 
-.. py:module:: repoze.what.plugins.x509.utils
-
-utils
------
-.. autofunction:: repoze.what.plugins.x509.utils.parse_dn
-.. autofunction:: repoze.what.plugins.x509.utils.verify_certificate
